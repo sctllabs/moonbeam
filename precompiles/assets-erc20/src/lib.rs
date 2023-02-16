@@ -65,6 +65,12 @@ pub type AssetIdOf<Runtime, Instance = ()> = <Runtime as pallet_dao_assets::Conf
 pub type IsLocal = ConstBool<true>;
 pub type IsForeign = ConstBool<false>;
 
+/// Custom conversion directly from H160 address
+pub trait AddressAssetIdConversion<Account, AssetId> {
+	// Get assetId and prefix from address
+	fn address_to_asset_id(address: H160) -> Option<(Vec<u8>, AssetId)>;
+}
+
 /// This trait ensure we can convert AccountIds to AssetIds
 /// We will require Runtime to have this trait implemented
 pub trait AccountIdAssetIdConversion<Account, AssetId> {
@@ -125,7 +131,7 @@ where
 	Runtime::RuntimeCall: From<pallet_dao_assets::Call<Runtime, Instance>>,
 	<Runtime::RuntimeCall as Dispatchable>::RuntimeOrigin: From<Option<Runtime::AccountId>>,
 	BalanceOf<Runtime, Instance>: TryFrom<U256> + Into<U256> + EvmData,
-	Runtime: AccountIdAssetIdConversion<Runtime::AccountId, AssetIdOf<Runtime, Instance>>,
+	Runtime: AddressAssetIdConversion<Runtime::AccountId, AssetIdOf<Runtime, Instance>>,
 	<<Runtime as frame_system::Config>::RuntimeCall as Dispatchable>::RuntimeOrigin: OriginTrait,
 	IsLocal: Get<bool>,
 	<Runtime as pallet_timestamp::Config>::Moment: Into<U256>,
@@ -135,8 +141,7 @@ where
 	/// and if this is the case which one.
 	#[precompile::discriminant]
 	fn discriminant(address: H160) -> Option<AssetIdOf<Runtime, Instance>> {
-		let account_id = Runtime::AddressMapping::into_account_id(address);
-		let asset_id = match Runtime::account_to_asset_id(account_id) {
+		let asset_id = match Runtime::address_to_asset_id(address) {
 			Some((_, asset_id)) => asset_id,
 			None => return None,
 		};
