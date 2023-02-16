@@ -252,8 +252,8 @@ impl pallet_evm::Config for Runtime {
 	type FindAuthor = ();
 }
 
-type ForeignAssetInstance = pallet_assets::Instance1;
-type LocalAssetInstance = pallet_assets::Instance2;
+type ForeignAssetInstance = pallet_dao_assets::Instance1;
+type LocalAssetInstance = pallet_dao_assets::Instance2;
 
 // These parameters dont matter much as this will only be called by root with the forced arguments
 // No deposit is substracted with those methods
@@ -266,7 +266,7 @@ parameter_types! {
 	pub const AssetAccountDeposit: Balance = 0;
 }
 
-impl pallet_assets::Config<ForeignAssetInstance> for Runtime {
+impl pallet_dao_assets::Config<ForeignAssetInstance> for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type Balance = Balance;
 	type AssetId = AssetId;
@@ -280,10 +280,10 @@ impl pallet_assets::Config<ForeignAssetInstance> for Runtime {
 	type Freezer = ();
 	type Extra = ();
 	type AssetAccountDeposit = AssetAccountDeposit;
-	type WeightInfo = pallet_assets::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = pallet_dao_assets::weights::SubstrateWeight<Runtime>;
 }
 
-impl pallet_assets::Config<LocalAssetInstance> for Runtime {
+impl pallet_dao_assets::Config<LocalAssetInstance> for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type Balance = Balance;
 	type AssetId = AssetId;
@@ -297,7 +297,7 @@ impl pallet_assets::Config<LocalAssetInstance> for Runtime {
 	type Freezer = ();
 	type Extra = ();
 	type AssetAccountDeposit = AssetAccountDeposit;
-	type WeightInfo = pallet_assets::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = pallet_dao_assets::weights::SubstrateWeight<Runtime>;
 }
 
 // Configure a mock runtime to test the pallet.
@@ -309,10 +309,10 @@ construct_runtime!(
 	{
 		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
-		ForeignAssets: pallet_assets::<Instance1>::{Pallet, Call, Storage, Event<T>},
+		ForeignAssets: pallet_dao_assets::<Instance1>::{Pallet, Call, Storage, Event<T>},
 		Evm: pallet_evm::{Pallet, Call, Storage, Event<T>},
 		Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
-		LocalAssets: pallet_assets::<Instance2>::{Pallet, Call, Storage, Event<T>}
+		LocalAssets: pallet_dao_assets::<Instance2>::{Pallet, Call, Storage, Event<T>}
 	}
 );
 
@@ -355,19 +355,19 @@ pub struct Precompiles<R>(PhantomData<R>);
 
 impl<R> PrecompileSet for Precompiles<R>
 where
-	Erc20AssetsPrecompileSet<R, IsForeign, pallet_assets::Instance1>: PrecompileSet,
-	Erc20AssetsPrecompileSet<R, IsLocal, pallet_assets::Instance2>: PrecompileSet,
+	Erc20AssetsPrecompileSet<R, IsForeign, pallet_dao_assets::Instance1>: PrecompileSet,
+	Erc20AssetsPrecompileSet<R, IsLocal, pallet_dao_assets::Instance2>: PrecompileSet,
 {
 	fn execute(&self, handle: &mut impl PrecompileHandle) -> Option<EvmResult<PrecompileOutput>> {
 		match handle.code_address() {
 			// If the address matches asset prefix, the we route through the foreign  asset precompile set
 			a if &a.to_fixed_bytes()[0..4] == LOCAL_ASSET_PRECOMPILE_ADDRESS_PREFIX => {
-				Erc20AssetsPrecompileSet::<R, IsLocal, pallet_assets::Instance2>::new()
+				Erc20AssetsPrecompileSet::<R, IsLocal, pallet_dao_assets::Instance2>::new()
 					.execute(handle)
 			}
 			// If the address matches asset prefix, the we route through the local asset precompile set
 			a if &a.to_fixed_bytes()[0..4] == FOREIGN_ASSET_PRECOMPILE_ADDRESS_PREFIX => {
-				Erc20AssetsPrecompileSet::<R, IsForeign, pallet_assets::Instance1>::new()
+				Erc20AssetsPrecompileSet::<R, IsForeign, pallet_dao_assets::Instance1>::new()
 					.execute(handle)
 			}
 			_ => None,
@@ -375,10 +375,10 @@ where
 	}
 
 	fn is_precompile(&self, address: H160) -> bool {
-		Erc20AssetsPrecompileSet::<R, IsForeign, pallet_assets::Instance1>::new()
+		Erc20AssetsPrecompileSet::<R, IsForeign, pallet_dao_assets::Instance1>::new()
 			.is_precompile(address)
 	}
 }
 
-pub type LocalPCall = Erc20AssetsPrecompileSetCall<Runtime, IsLocal, pallet_assets::Instance2>;
-pub type ForeignPCall = Erc20AssetsPrecompileSetCall<Runtime, IsLocal, pallet_assets::Instance1>;
+pub type LocalPCall = Erc20AssetsPrecompileSetCall<Runtime, IsLocal, pallet_dao_assets::Instance2>;
+pub type ForeignPCall = Erc20AssetsPrecompileSetCall<Runtime, IsLocal, pallet_dao_assets::Instance1>;

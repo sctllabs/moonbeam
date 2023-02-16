@@ -21,7 +21,7 @@ use frame_support::{
 	traits::StorageInstance,
 	Blake2_128Concat,
 };
-use pallet_assets::pallet::{
+use pallet_dao_assets::pallet::{
 	Instance1, Instance10, Instance11, Instance12, Instance13, Instance14, Instance15, Instance16,
 	Instance2, Instance3, Instance4, Instance5, Instance6, Instance7, Instance8, Instance9,
 };
@@ -115,12 +115,12 @@ pub struct Eip2612<Runtime, IsLocal, Instance: 'static = ()>(
 impl<Runtime, IsLocal, Instance> Eip2612<Runtime, IsLocal, Instance>
 where
 	Instance: InstanceToPrefix + 'static,
-	Runtime: pallet_assets::Config<Instance>
+	Runtime: pallet_dao_assets::Config<Instance>
 		+ pallet_evm::Config
 		+ frame_system::Config
 		+ pallet_timestamp::Config,
 	Runtime::RuntimeCall: Dispatchable<PostInfo = PostDispatchInfo> + GetDispatchInfo,
-	Runtime::RuntimeCall: From<pallet_assets::Call<Runtime, Instance>>,
+	Runtime::RuntimeCall: From<pallet_dao_assets::Call<Runtime, Instance>>,
 	<Runtime::RuntimeCall as Dispatchable>::RuntimeOrigin: From<Option<Runtime::AccountId>>,
 	BalanceOf<Runtime, Instance>: TryFrom<U256> + Into<U256> + EvmData,
 	Runtime: AccountIdAssetIdConversion<Runtime::AccountId, AssetIdOf<Runtime, Instance>>,
@@ -130,7 +130,7 @@ where
 	AssetIdOf<Runtime, Instance>: Display,
 {
 	fn compute_domain_separator(address: H160, asset_id: AssetIdOf<Runtime, Instance>) -> [u8; 32] {
-		let asset_name = pallet_assets::Pallet::<Runtime, Instance>::name(asset_id);
+		let asset_name = pallet_dao_assets::Pallet::<Runtime, Instance>::name(asset_id);
 
 		let name = if asset_name.is_empty() {
 			let mut name = b"Unnamed XC20 #".to_vec();
