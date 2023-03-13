@@ -200,8 +200,8 @@ impl pallet_evm::Config for Runtime {
 	type FindAuthor = ();
 }
 
-type ForeignAssetInstance = pallet_assets::Instance1;
-type LocalAssetInstance = pallet_assets::Instance2;
+type ForeignAssetInstance = pallet_dao_assets::Instance1;
+type LocalAssetInstance = pallet_dao_assets::Instance2;
 
 // These parameters dont matter much as this will only be called by root with the forced arguments
 // No deposit is substracted with those methods
@@ -214,7 +214,7 @@ parameter_types! {
 	pub const AssetAccountDeposit: Balance = 0;
 }
 
-impl pallet_assets::Config<ForeignAssetInstance> for Runtime {
+impl pallet_dao_assets::Config<ForeignAssetInstance> for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type Balance = Balance;
 	type AssetId = AssetId;
@@ -228,14 +228,10 @@ impl pallet_assets::Config<ForeignAssetInstance> for Runtime {
 	type Freezer = ();
 	type Extra = ();
 	type AssetAccountDeposit = AssetAccountDeposit;
-	type WeightInfo = pallet_assets::weights::SubstrateWeight<Runtime>;
-	type RemoveItemsLimit = ConstU32<1000>;
-	type AssetIdParameter = AssetId;
-	type CreateOrigin = AsEnsureOriginWithArg<EnsureNever<AccountId>>;
-	type CallbackHandle = ();
+	type WeightInfo = pallet_dao_assets::weights::SubstrateWeight<Runtime>;
 }
 
-impl pallet_assets::Config<LocalAssetInstance> for Runtime {
+impl pallet_dao_assets::Config<LocalAssetInstance> for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type Balance = Balance;
 	type AssetId = AssetId;
@@ -249,11 +245,7 @@ impl pallet_assets::Config<LocalAssetInstance> for Runtime {
 	type Freezer = ();
 	type Extra = ();
 	type AssetAccountDeposit = AssetAccountDeposit;
-	type WeightInfo = pallet_assets::weights::SubstrateWeight<Runtime>;
-	type RemoveItemsLimit = ConstU32<1000>;
-	type AssetIdParameter = AssetId;
-	type CreateOrigin = AsEnsureOriginWithArg<EnsureNever<AccountId>>;
-	type CallbackHandle = ();
+	type WeightInfo = pallet_dao_assets::weights::SubstrateWeight<Runtime>;
 }
 
 // Configure a mock runtime to test the pallet.
@@ -265,10 +257,10 @@ construct_runtime!(
 	{
 		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
-		ForeignAssets: pallet_assets::<Instance1>::{Pallet, Call, Storage, Event<T>},
+		ForeignAssets: pallet_dao_assets::<Instance1>::{Pallet, Call, Storage, Event<T>},
 		Evm: pallet_evm::{Pallet, Call, Storage, Event<T>},
 		Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
-		LocalAssets: pallet_assets::<Instance2>::{Pallet, Call, Storage, Event<T>}
+		LocalAssets: pallet_dao_assets::<Instance2>::{Pallet, Call, Storage, Event<T>}
 	}
 );
 

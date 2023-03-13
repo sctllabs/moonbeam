@@ -318,7 +318,7 @@ strum_macros = "0.24"
 ansi_term = "0.12.1"
 assert_cmd = "0.12"
 async-io = "1.3"
-bip32 = { git = "https://github.com/purestake/crates", branch = "bip32-v0.4.0-fix", default-features = false, features = [ "bip39" ] }
+bip32 = "0.4.0"
 clap = { version = "4.0.9", features = [ "derive" ] }
 exit-future = "0.2"
 flume = "0.10.9"

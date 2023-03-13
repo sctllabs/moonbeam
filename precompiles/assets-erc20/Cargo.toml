@@ -1,49 +1,49 @@
 [package]
 name = "pallet-evm-precompileset-assets-erc20"
-authors = { workspace = true }
+authors = [ "paritytech" ]
 description = "A Precompile to expose Assets pallet through an ERC20-compliant interface."
 edition = "2021"
 version = "0.1.0"
 
 [dependencies]
-log = { workspace = true }
-num_enum = { workspace = true }
-paste = { workspace = true }
+log = { version = "0.4", default-features = false }
+num_enum = { version = "0.5.3", default-features = false }
+paste = "1.0.6"
 
 # Moonbeam
-precompile-utils = { workspace = true }
+precompile-utils = { path = "../utils", default-features = false }
 
 # Substrate
-frame-support = { workspace = true }
-frame-system = { workspace = true }
-pallet-assets = { workspace = true }
-pallet-balances = { workspace = true }
-pallet-timestamp = { workspace = true }
-parity-scale-codec = { workspace = true, features = [ "max-encoded-len" ] }
-scale-info = { workspace = true, features = [ "derive" ] }
-sp-core = { workspace = true }
-sp-io = { workspace = true }
-sp-runtime = { workspace = true }
-sp-std = { workspace = true }
+frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.37", default-features = false }
+frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.37", default-features = false }
+pallet-dao-assets = { git = "https://github.com/sctllabs/societal-node", branch = "polkadot-v0.9.37-assets", default-features = false }
+pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.37", default-features = false }
+pallet-timestamp = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.37", default-features = false }
+parity-scale-codec = { version = "3.0.0", default-features = false, features = [ "derive" ] }
+scale-info = { version = "2.0", default-features = false, features = [ "derive" ] }
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.37", default-features = false }
+sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.37", default-features = false }
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.37", default-features = false }
+sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.37", default-features = false }
 
 # Frontier
-fp-evm = { workspace = true }
-pallet-evm = { workspace = true, features = [ "forbid-evm-reentrancy" ] }
+fp-evm = { git = "https://github.com/sctllabs/frontier.git", branch = "polkadot-v0.9.37", default-features = false }
+pallet-evm = { git = "https://github.com/sctllabs/frontier.git", branch = "polkadot-v0.9.37", default-features = false, features = [ "forbid-evm-reentrancy" ] }
 
 [dev-dependencies]
-derive_more = { workspace = true }
-hex-literal = { workspace = true }
-libsecp256k1 = { workspace = true }
-serde = { workspace = true }
-sha3 = { workspace = true }
+derive_more = "0.99"
+hex-literal = { version = "0.3.4" }
+libsecp256k1 = { version = "0.7", default-features = false }
+serde = { version = "1.0.101", default-features = false }
+sha3 = { version = "0.10", default-features = false }
 
 # Moonbeam
-precompile-utils = { workspace = true, features = [ "std", "testing" ] }
+precompile-utils = { path = "../utils", default-features = false }
 
-pallet-timestamp = { workspace = true, features = [ "std" ] }
-parity-scale-codec = { workspace = true, features = [ "max-encoded-len", "std" ] }
-scale-info = { workspace = true, features = [ "derive" ] }
-sp-runtime = { workspace = true, features = [ "std" ] }
+pallet-timestamp = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.37", default-features = false }
+parity-scale-codec = { version = "3.0.0", default-features = false, features = [ "derive" ] }
+scale-info = { version = "2.0", default-features = false, features = [ "derive" ] }
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.37", default-features = false }
 
 [features]
 default = [ "std" ]
@@ -51,7 +51,7 @@ std = [
 	"fp-evm/std",
 	"frame-support/std",
 	"frame-system/std",
-	"pallet-assets/std",
+	"pallet-dao-assets/std",
 	"pallet-balances/std",
 	"pallet-evm/std",
 	"pallet-timestamp/std",
