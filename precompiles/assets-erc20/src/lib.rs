@@ -54,17 +54,25 @@ pub const SELECTOR_LOG_TRANSFER: [u8; 32] = keccak256!("Transfer(address,address
 pub const SELECTOR_LOG_APPROVAL: [u8; 32] = keccak256!("Approval(address,address,uint256)");
 
 /// Length limit of strings (symbol and name).
-type GetAssetsStringLimit<R, I> = <R as pallet_assets::Config<I>>::StringLimit;
+type GetAssetsStringLimit<R, I> = <R as pallet_dao_assets::Config<I>>::StringLimit;
 
 /// Alias for the Balance type for the provided Runtime and Instance.
-pub type BalanceOf<Runtime, Instance = ()> = <Runtime as pallet_assets::Config<Instance>>::Balance;
+pub type BalanceOf<Runtime, Instance = ()> =
+	<Runtime as pallet_dao_assets::Config<Instance>>::Balance;
 
 /// Alias for the Asset Id type for the provided Runtime and Instance.
-pub type AssetIdOf<Runtime, Instance = ()> = <Runtime as pallet_assets::Config<Instance>>::AssetId;
+pub type AssetIdOf<Runtime, Instance = ()> =
+	<Runtime as pallet_dao_assets::Config<Instance>>::AssetId;
 
 /// Public types to use with the PrecompileSet
 pub type IsLocal = ConstBool<true>;
 pub type IsForeign = ConstBool<false>;
+
+/// Custom conversion directly from H160 address
+pub trait AddressAssetIdConversion<Account, AssetId> {
+	// Get assetId and prefix from address
+	fn address_to_asset_id(address: H160) -> Option<(Vec<u8>, AssetId)>;
+}
 
 /// This trait ensure we can convert AccountIds to AssetIds
 /// We will require Runtime to have this trait implemented
@@ -114,36 +122,34 @@ impl<Runtime, IsLocal, Instance> Erc20AssetsPrecompileSet<Runtime, IsLocal, Inst
 
 #[precompile_utils::precompile]
 #[precompile::precompile_set]
-#[precompile::test_concrete_types(mock::Runtime, IsForeign, pallet_assets::Instance1)]
+#[precompile::test_concrete_types(mock::Runtime, IsForeign, pallet_dao_assets::Instance1)]
 impl<Runtime, IsLocal, Instance> Erc20AssetsPrecompileSet<Runtime, IsLocal, Instance>
 where
 	Instance: eip2612::InstanceToPrefix + 'static,
-	Runtime: pallet_assets::Config<Instance>
+	Runtime: pallet_dao_assets::Config<Instance>
 		+ pallet_evm::Config
 		+ frame_system::Config
 		+ pallet_timestamp::Config,
 	Runtime::RuntimeCall: Dispatchable<PostInfo = PostDispatchInfo> + GetDispatchInfo,
-	Runtime::RuntimeCall: From<pallet_assets::Call<Runtime, Instance>>,
+	Runtime::RuntimeCall: From<pallet_dao_assets::Call<Runtime, Instance>>,
 	<Runtime::RuntimeCall as Dispatchable>::RuntimeOrigin: From<Option<Runtime::AccountId>>,
 	BalanceOf<Runtime, Instance>: TryFrom<U256> + Into<U256> + solidity::Codec,
-	Runtime: AccountIdAssetIdConversion<Runtime::AccountId, AssetIdOf<Runtime, Instance>>,
+	Runtime: AddressAssetIdConversion<Runtime::AccountId, AssetIdOf<Runtime, Instance>>,
 	<<Runtime as frame_system::Config>::RuntimeCall as Dispatchable>::RuntimeOrigin: OriginTrait,
 	IsLocal: Get<bool>,
 	<Runtime as pallet_timestamp::Config>::Moment: Into<U256>,
 	AssetIdOf<Runtime, Instance>: Display,
-	Runtime::AccountId: Into<H160>,
 {
 	/// PrecompileSet discrimiant. Allows to knows if the address maps to an asset id,
 	/// and if this is the case which one.
 	#[precompile::discriminant]
 	fn discriminant(address: H160) -> Option<AssetIdOf<Runtime, Instance>> {
-		let account_id = Runtime::AddressMapping::into_account_id(address);
-		let asset_id = match Runtime::account_to_asset_id(account_id) {
+		let asset_id = match Runtime::address_to_asset_id(address) {
 			Some((_, asset_id)) => asset_id,
 			None => return None,
 		};
 
-		if pallet_assets::Pallet::<Runtime, Instance>::maybe_total_supply(asset_id).is_some() {
+		if pallet_dao_assets::Pallet::<Runtime, Instance>::maybe_total_supply(asset_id).is_some() {
 			Some(asset_id)
 		} else {
 			None
@@ -158,7 +164,7 @@ where
 	) -> EvmResult<U256> {
 		handle.record_cost(RuntimeHelper::<Runtime>::db_read_gas_cost())?;
 
-		Ok(pallet_assets::Pallet::<Runtime, Instance>::total_issuance(asset_id).into())
+		Ok(pallet_dao_assets::Pallet::<Runtime, Instance>::total_issuance(asset_id).into())
 	}
 
 	#[precompile::public("balanceOf(address)")]
@@ -175,7 +181,7 @@ where
 		// Fetch info.
 		let amount: U256 = {
 			let who: Runtime::AccountId = Runtime::AddressMapping::into_account_id(who);
-			pallet_assets::Pallet::<Runtime, Instance>::balance(asset_id, &who).into()
+			pallet_dao_assets::Pallet::<Runtime, Instance>::balance(asset_id, &who).into()
 		};
 
 		// Build output.
@@ -201,7 +207,8 @@ where
 			let spender: Runtime::AccountId = Runtime::AddressMapping::into_account_id(spender);
 
 			// Fetch info.
-			pallet_assets::Pallet::<Runtime, Instance>::allowance(asset_id, &owner, &spender).into()
+			pallet_dao_assets::Pallet::<Runtime, Instance>::allowance(asset_id, &owner, &spender)
+				.into()
 		};
 
 		// Build output.
@@ -251,13 +258,13 @@ where
 		handle.record_cost(RuntimeHelper::<Runtime>::db_read_gas_cost())?;
 
 		// If previous approval exists, we need to clean it
-		if pallet_assets::Pallet::<Runtime, Instance>::allowance(asset_id, &owner, &spender)
+		if pallet_dao_assets::Pallet::<Runtime, Instance>::allowance(asset_id, &owner, &spender)
 			!= 0u32.into()
 		{
 			RuntimeHelper::<Runtime>::try_dispatch(
 				handle,
 				Some(owner.clone()).into(),
-				pallet_assets::Call::<Runtime, Instance>::cancel_approval {
+				pallet_dao_assets::Call::<Runtime, Instance>::cancel_approval {
 					id: asset_id.into(),
 					delegate: Runtime::Lookup::unlookup(spender.clone()),
 				},
@@ -267,7 +274,7 @@ where
 		RuntimeHelper::<Runtime>::try_dispatch(
 			handle,
 			Some(owner).into(),
-			pallet_assets::Call::<Runtime, Instance>::approve_transfer {
+			pallet_dao_assets::Call::<Runtime, Instance>::approve_transfer {
 				id: asset_id.into(),
 				delegate: Runtime::Lookup::unlookup(spender),
 				amount,
@@ -298,7 +305,7 @@ where
 			RuntimeHelper::<Runtime>::try_dispatch(
 				handle,
 				Some(origin).into(),
-				pallet_assets::Call::<Runtime, Instance>::transfer {
+				pallet_dao_assets::Call::<Runtime, Instance>::transfer {
 					id: asset_id.into(),
 					target: Runtime::Lookup::unlookup(to),
 					amount: value,
@@ -344,7 +351,7 @@ where
 				RuntimeHelper::<Runtime>::try_dispatch(
 					handle,
 					Some(caller).into(),
-					pallet_assets::Call::<Runtime, Instance>::transfer_approved {
+					pallet_dao_assets::Call::<Runtime, Instance>::transfer_approved {
 						id: asset_id.into(),
 						owner: Runtime::Lookup::unlookup(from),
 						destination: Runtime::Lookup::unlookup(to),
@@ -356,7 +363,7 @@ where
 				RuntimeHelper::<Runtime>::try_dispatch(
 					handle,
 					Some(from).into(),
-					pallet_assets::Call::<Runtime, Instance>::transfer {
+					pallet_dao_assets::Call::<Runtime, Instance>::transfer {
 						id: asset_id.into(),
 						target: Runtime::Lookup::unlookup(to),
 						amount: value,
@@ -386,7 +393,7 @@ where
 	) -> EvmResult<UnboundedBytes> {
 		handle.record_cost(RuntimeHelper::<Runtime>::db_read_gas_cost())?;
 
-		let name = pallet_assets::Pallet::<Runtime, Instance>::name(asset_id)
+		let name = pallet_dao_assets::Pallet::<Runtime, Instance>::name(asset_id)
 			.as_slice()
 			.into();
 
@@ -401,7 +408,7 @@ where
 	) -> EvmResult<UnboundedBytes> {
 		handle.record_cost(RuntimeHelper::<Runtime>::db_read_gas_cost())?;
 
-		let symbol = pallet_assets::Pallet::<Runtime, Instance>::symbol(asset_id)
+		let symbol = pallet_dao_assets::Pallet::<Runtime, Instance>::symbol(asset_id)
 			.as_slice()
 			.into();
 
@@ -416,69 +423,9 @@ where
 	) -> EvmResult<u8> {
 		handle.record_cost(RuntimeHelper::<Runtime>::db_read_gas_cost())?;
 
-		Ok(pallet_assets::Pallet::<Runtime, Instance>::decimals(
+		Ok(pallet_dao_assets::Pallet::<Runtime, Instance>::decimals(
 			asset_id,
 		))
-	}
-
-	#[precompile::public("owner()")]
-	#[precompile::view]
-	fn owner(
-		asset_id: AssetIdOf<Runtime, Instance>,
-		handle: &mut impl PrecompileHandle,
-	) -> EvmResult<Address> {
-		handle.record_cost(RuntimeHelper::<Runtime>::db_read_gas_cost())?;
-
-		let owner: H160 = pallet_assets::Pallet::<Runtime, Instance>::owner(asset_id)
-			.ok_or(revert("No owner set"))?
-			.into();
-
-		Ok(Address(owner))
-	}
-
-	#[precompile::public("issuer()")]
-	#[precompile::view]
-	fn issuer(
-		asset_id: AssetIdOf<Runtime, Instance>,
-		handle: &mut impl PrecompileHandle,
-	) -> EvmResult<Address> {
-		handle.record_cost(RuntimeHelper::<Runtime>::db_read_gas_cost())?;
-
-		let issuer: H160 = pallet_assets::Pallet::<Runtime, Instance>::issuer(asset_id)
-			.ok_or(revert("No issuer set"))?
-			.into();
-
-		Ok(Address(issuer))
-	}
-
-	#[precompile::public("admin()")]
-	#[precompile::view]
-	fn admin(
-		asset_id: AssetIdOf<Runtime, Instance>,
-		handle: &mut impl PrecompileHandle,
-	) -> EvmResult<Address> {
-		handle.record_cost(RuntimeHelper::<Runtime>::db_read_gas_cost())?;
-
-		let admin: H160 = pallet_assets::Pallet::<Runtime, Instance>::admin(asset_id)
-			.ok_or(revert("No admin set"))?
-			.into();
-
-		Ok(Address(admin))
-	}
-
-	#[precompile::public("freezer()")]
-	#[precompile::view]
-	fn freezer(
-		asset_id: AssetIdOf<Runtime, Instance>,
-		handle: &mut impl PrecompileHandle,
-	) -> EvmResult<Address> {
-		handle.record_cost(RuntimeHelper::<Runtime>::db_read_gas_cost())?;
-
-		let freezer: H160 = pallet_assets::Pallet::<Runtime, Instance>::freezer(asset_id)
-			.ok_or(revert("No freezer set"))?
-			.into();
-
-		Ok(Address(freezer))
 	}
 
 	// From here: only for locals, we need to check whether we are in local assets otherwise fail
@@ -507,7 +454,7 @@ where
 			RuntimeHelper::<Runtime>::try_dispatch(
 				handle,
 				Some(origin).into(),
-				pallet_assets::Call::<Runtime, Instance>::mint {
+				pallet_dao_assets::Call::<Runtime, Instance>::mint {
 					id: asset_id.into(),
 					beneficiary: Runtime::Lookup::unlookup(to),
 					amount: value,
@@ -552,7 +499,7 @@ where
 			RuntimeHelper::<Runtime>::try_dispatch(
 				handle,
 				Some(origin).into(),
-				pallet_assets::Call::<Runtime, Instance>::burn {
+				pallet_dao_assets::Call::<Runtime, Instance>::burn {
 					id: asset_id.into(),
 					who: Runtime::Lookup::unlookup(from),
 					amount: value,
@@ -593,7 +540,7 @@ where
 			RuntimeHelper::<Runtime>::try_dispatch(
 				handle,
 				Some(origin).into(),
-				pallet_assets::Call::<Runtime, Instance>::freeze {
+				pallet_dao_assets::Call::<Runtime, Instance>::freeze {
 					id: asset_id.into(),
 					who: Runtime::Lookup::unlookup(account),
 				},
@@ -624,7 +571,7 @@ where
 			RuntimeHelper::<Runtime>::try_dispatch(
 				handle,
 				Some(origin).into(),
-				pallet_assets::Call::<Runtime, Instance>::thaw {
+				pallet_dao_assets::Call::<Runtime, Instance>::thaw {
 					id: asset_id.into(),
 					who: Runtime::Lookup::unlookup(account),
 				},
@@ -652,7 +599,7 @@ where
 			RuntimeHelper::<Runtime>::try_dispatch(
 				handle,
 				Some(origin).into(),
-				pallet_assets::Call::<Runtime, Instance>::freeze_asset {
+				pallet_dao_assets::Call::<Runtime, Instance>::freeze_asset {
 					id: asset_id.into(),
 				},
 			)?;
@@ -679,7 +626,7 @@ where
 			RuntimeHelper::<Runtime>::try_dispatch(
 				handle,
 				Some(origin).into(),
-				pallet_assets::Call::<Runtime, Instance>::thaw_asset {
+				pallet_dao_assets::Call::<Runtime, Instance>::thaw_asset {
 					id: asset_id.into(),
 				},
 			)?;
@@ -711,7 +658,7 @@ where
 			RuntimeHelper::<Runtime>::try_dispatch(
 				handle,
 				Some(origin).into(),
-				pallet_assets::Call::<Runtime, Instance>::transfer_ownership {
+				pallet_dao_assets::Call::<Runtime, Instance>::transfer_ownership {
 					id: asset_id.into(),
 					owner: Runtime::Lookup::unlookup(owner),
 				},
@@ -749,7 +696,7 @@ where
 			RuntimeHelper::<Runtime>::try_dispatch(
 				handle,
 				Some(origin).into(),
-				pallet_assets::Call::<Runtime, Instance>::set_team {
+				pallet_dao_assets::Call::<Runtime, Instance>::set_team {
 					id: asset_id.into(),
 					issuer: Runtime::Lookup::unlookup(issuer),
 					admin: Runtime::Lookup::unlookup(admin),
@@ -782,7 +729,7 @@ where
 			RuntimeHelper::<Runtime>::try_dispatch(
 				handle,
 				Some(origin).into(),
-				pallet_assets::Call::<Runtime, Instance>::set_metadata {
+				pallet_dao_assets::Call::<Runtime, Instance>::set_metadata {
 					id: asset_id.into(),
 					name: name.into(),
 					symbol: symbol.into(),
@@ -812,7 +759,7 @@ where
 			RuntimeHelper::<Runtime>::try_dispatch(
 				handle,
 				Some(origin).into(),
-				pallet_assets::Call::<Runtime, Instance>::clear_metadata {
+				pallet_dao_assets::Call::<Runtime, Instance>::clear_metadata {
 					id: asset_id.into(),
 				},
 			)?;

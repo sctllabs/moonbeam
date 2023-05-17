@@ -1566,7 +1566,7 @@ fn permit_valid() {
 			let value: U256 = 500u16.into();
 			let deadline: U256 = 0u8.into(); // todo: proper timestamp
 
-			let permit = Eip2612::<Runtime, IsLocal, pallet_assets::Instance1>::generate_permit(
+			let permit = Eip2612::<Runtime, IsLocal, pallet_dao_assets::Instance1>::generate_permit(
 				ForeignAssetId(0u128).into(),
 				0u128,
 				owner,
@@ -1675,7 +1675,7 @@ fn permit_valid_named_asset() {
 			let value: U256 = 500u16.into();
 			let deadline: U256 = 0u8.into(); // todo: proper timestamp
 
-			let permit = Eip2612::<Runtime, IsLocal, pallet_assets::Instance1>::generate_permit(
+			let permit = Eip2612::<Runtime, IsLocal, pallet_dao_assets::Instance1>::generate_permit(
 				ForeignAssetId(0u128).into(),
 				0u128,
 				owner,
@@ -1777,7 +1777,7 @@ fn permit_invalid_nonce() {
 			let value: U256 = 500u16.into();
 			let deadline: U256 = 0u8.into();
 
-			let permit = Eip2612::<Runtime, IsLocal, pallet_assets::Instance1>::generate_permit(
+			let permit = Eip2612::<Runtime, IsLocal, pallet_dao_assets::Instance1>::generate_permit(
 				ForeignAssetId(0u128).into(),
 				0u128,
 				owner,
@@ -1953,7 +1953,7 @@ fn permit_invalid_deadline() {
 			let value: U256 = 500u16.into();
 			let deadline: U256 = 5u8.into(); // deadline < timestamp => expired
 
-			let permit = Eip2612::<Runtime, IsLocal, pallet_assets::Instance1>::generate_permit(
+			let permit = Eip2612::<Runtime, IsLocal, pallet_dao_assets::Instance1>::generate_permit(
 				ForeignAssetId(0u128).into(),
 				0u128,
 				owner,
